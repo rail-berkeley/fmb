@@ -1,0 +1,25 @@
+Bootstrap: localimage
+From: ./base_img.sif   # Starting from our base container image
+
+# Copy the research project code
+%files
+    /home/panda/code/PegInsertion /contained/project/PegInsertion
+
+
+%environment
+    # Activate conda environment
+    source /contained/anaconda3/etc/profile.d/conda.sh
+    conda activate peg
+
+    export WANDB_API_KEY='fc50a5f4006fdb40484801211b81676767b2d1d8'
+
+    # Set up python path for the research project
+    export PYTHONPATH="$PYTHONPATH:/contained/project/PegInsertion"
+
+    ls /contained/project
+
+
+%runscript
+    #! /bin/bash
+    python -m "$@"
+    # Entry point for singularity run

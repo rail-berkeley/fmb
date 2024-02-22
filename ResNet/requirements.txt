@@ -1,0 +1,36 @@
+gym == 0.26.2
+gym[classic_control] == 0.26.2
+optax
+flax
+distrax
+ml_collections
+numpy
+scipy
+h5py
+matplotlib
+scikit-learn
+jupyter
+tqdm
+seaborn
+absl-py
+wandb
+tensorflow-probability
+moviepy
+imageio
+ipdb
+# torch
+# torchvision
+nvidia-cudnn-cu11
+nvidia-cuda-runtime-cu11
+nvidia-cuda-nvcc-cu11
+tensorflow_datasets >= 4.9.2
+torchvision
+tensorflow
+opencv-python
+
+# pip install -r /contained/setup/requirements.txt
+
+# pip install --upgrade "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+# conda install torch 
+# conda install torchvision
