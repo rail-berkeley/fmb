@@ -1,4 +1,10 @@
 # RLDS Dataset Conversion
+For efficient dataloading, the entire FMB codebase requires the data to be converted into the RLDS format. 
+The complete FMB dataset in RLDS format is released on [TensorFlow Datasets](https://www.tensorflow.org/datasets/catalog/fmb) for convinence. 
+
+However, for the best performance when training on a subset of the data (for example, a particular skill or task), we recommand pre-process the raw data into smaller filtered RLDS datasets. 
+
+The raw dataset can be found on our [dataset page](https://functional-manipulation-benchmark.github.io/dataset/index.html) in `.npy` format. This module provides the code for creating a custom RLDS dataset from the `.npy` files.
 
 ## Installation
 First create a conda environment using the provided environment.yml file (use `environment_ubuntu.yml` or `environment_macos.yml` depending on the operating system you're using):
