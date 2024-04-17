@@ -2,9 +2,7 @@ from copy import deepcopy
 import numpy as np
 import torch
 from torchvision.transforms import RandAugment, TrivialAugmentWide, AugMix, RandomCrop, ColorJitter
-import time
 from scipy.spatial.transform import Rotation as R
-from tqdm import tqdm
 from flax.core import FrozenDict
 
 

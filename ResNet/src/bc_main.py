@@ -1,9 +1,5 @@
-import glob
 from functools import partial
-
-import numpy as np
 import pprint
-
 import jax
 import jax.numpy as jnp
 import flax
@@ -20,10 +16,9 @@ from .data import (
 )
 from .utils import (
     define_flags_with_default, set_random_seed,
-    get_user_flags, WandBLogger, average_metrics, load_policy_and_params
+    get_user_flags, WandBLogger, average_metrics
 )
 
-from .dataloader import Dataset
 from .rlds.rlds_dataset import RLDSDataset
 
 FLAGS_DEF = define_flags_with_default(
@@ -52,7 +47,6 @@ FLAGS_DEF = define_flags_with_default(
     policy=TanhGaussianResNetPolicy.get_default_config(),
     logger=WandBLogger.get_default_config(),
     train_gripper=True,
-    finetune_policy=False,
     load_checkpoint='',
     tcp_frame=False,
     data_percent=1.0,
@@ -63,7 +57,6 @@ FLAGS_DEF = define_flags_with_default(
     train_mse=False,
     num_pegs=0,
     num_primitives=0,
-    tfrecord=True,
     primitive="",
     peg="",
     cache=False,
@@ -97,85 +90,42 @@ def main(argv):
     dataset_img_keys = [f'obs/{key}' for key in image_keys]
     dataset_state_keys = [f'obs/{key}' for key in state_keys]
 
-    if FLAGS.tfrecord:
-        if FLAGS.device=='gpu':
-            file_paths = []
-            for path in dataset_path:
-                file_paths += sorted(glob.glob(path+"*.tfrecord"))
-        elif FLAGS.device=='tpu':
-            import tensorflow as tf
-            file_paths = []
-            for path in dataset_path:
-                file_paths += sorted(tf.io.gfile.glob(path+"*.tfrecord"))
-        else:
-            raise NotImplementedError
-        if FLAGS.last_action:
-            dataset_state_keys.append('last_actions')
-        file_paths = np.array(file_paths)
-        shuffle_idx = np.random.permutation(len(file_paths))[:int(len(file_paths)*FLAGS.data_percent)]
-        train_path = file_paths[shuffle_idx[:int(len(shuffle_idx) * FLAGS.train_ratio)]]
-        print(f'Number of train trajectories: {len(train_path)}')
-        train_dataset = Dataset(train_path,
-                        FLAGS.seed, 
-                        batch_size=FLAGS.batch_size,
-                        use_transitions=True,
-                        image_keys=dataset_img_keys, 
-                        state_keys=dataset_state_keys,
-                        num_action_chunk=FLAGS.num_action_chunk,
-                        num_frame_stack=FLAGS.num_frame_stack,
-                        cache=FLAGS.cache,
-                        )
-        train_loader_iterator = train_dataset.get_iterator()
-        val_path = file_paths[shuffle_idx[int(len(shuffle_idx) * FLAGS.train_ratio):]]
-        print(f'Number of test trajectories: {len(val_path)}')
-        val_dataset = Dataset(val_path,
-                        FLAGS.seed, 
-                        batch_size=FLAGS.batch_size,
-                        use_transitions=True,
-                        image_keys=dataset_img_keys, 
-                        state_keys=dataset_state_keys,
-                        num_action_chunk=FLAGS.num_action_chunk,
-                        num_frame_stack=FLAGS.num_frame_stack,
-                        cache=FLAGS.cache,
-                        )
-        val_loader_iterator = val_dataset.get_iterator()
-    else:
-        print(f"peg_keys={[int(i) for i in FLAGS.peg.split(':')] if FLAGS.peg != '' else None}")
-        print(f"primitive_keys={FLAGS.primitive.split(':') if FLAGS.primitive != '' else None}")
-        train_dataset = RLDSDataset(
-            dataset_names=FLAGS.dataset_name.split(';'),
-            tfds_data_dir=FLAGS.dataset_path,
-            image_obs_key=image_keys,
-            image_processor="default",
-            seed=FLAGS.seed,
-            batch_size=FLAGS.batch_size,
-            obs_horizon=FLAGS.num_frame_stack,
-            act_pred_horizon=FLAGS.num_action_chunk,
-            num_pegs=FLAGS.num_pegs,
-            num_primitives=FLAGS.num_primitives,
-            primitive_key=FLAGS.primitive.split(':') if FLAGS.primitive != '' else None,
-            peg_keys=[int(i) for i in FLAGS.peg.split(':')] if FLAGS.peg != '' else None,
-            cache=FLAGS.cache,
-            **base_data_config
-        )
-        train_loader_iterator = train_dataset.get_iterator()
-        val_dataset = RLDSDataset(
-            dataset_names=FLAGS.dataset_name.split(';'),
-            tfds_data_dir=FLAGS.dataset_path,
-            image_obs_key=image_keys,
-            image_processor="default",
-            seed=FLAGS.seed,
-            batch_size=FLAGS.batch_size,
-            obs_horizon=FLAGS.num_frame_stack,
-            act_pred_horizon=FLAGS.num_action_chunk,
-            train=False,
-            num_pegs=FLAGS.num_pegs,
-            num_primitives=FLAGS.num_primitives,
-            primitive_key=FLAGS.primitive.split(':') if FLAGS.primitive != '' else None,
-            peg_keys=[int(i) for i in FLAGS.peg.split(':')] if FLAGS.peg != '' else None,
-            cache=FLAGS.cache,
-            **base_data_config
-        )
+    print(f"peg_keys={[int(i) for i in FLAGS.peg.split(':')] if FLAGS.peg != '' else None}")
+    print(f"primitive_keys={FLAGS.primitive.split(':') if FLAGS.primitive != '' else None}")
+    train_dataset = RLDSDataset(
+        dataset_names=FLAGS.dataset_name.split(';'),
+        tfds_data_dir=FLAGS.dataset_path,
+        image_obs_key=image_keys,
+        image_processor="default",
+        seed=FLAGS.seed,
+        batch_size=FLAGS.batch_size,
+        obs_horizon=FLAGS.num_frame_stack,
+        act_pred_horizon=FLAGS.num_action_chunk,
+        num_pegs=FLAGS.num_pegs,
+        num_primitives=FLAGS.num_primitives,
+        primitive_key=FLAGS.primitive.split(':') if FLAGS.primitive != '' else None,
+        peg_keys=[int(i) for i in FLAGS.peg.split(':')] if FLAGS.peg != '' else None,
+        cache=FLAGS.cache,
+        **base_data_config
+    )
+    train_loader_iterator = train_dataset.get_iterator()
+    val_dataset = RLDSDataset(
+        dataset_names=FLAGS.dataset_name.split(';'),
+        tfds_data_dir=FLAGS.dataset_path,
+        image_obs_key=image_keys,
+        image_processor="default",
+        seed=FLAGS.seed,
+        batch_size=FLAGS.batch_size,
+        obs_horizon=FLAGS.num_frame_stack,
+        act_pred_horizon=FLAGS.num_action_chunk,
+        train=False,
+        num_pegs=FLAGS.num_pegs,
+        num_primitives=FLAGS.num_primitives,
+        primitive_key=FLAGS.primitive.split(':') if FLAGS.primitive != '' else None,
+        peg_keys=[int(i) for i in FLAGS.peg.split(':')] if FLAGS.peg != '' else None,
+        cache=FLAGS.cache,
+        **base_data_config
+    )
     batch = next(train_loader_iterator)
     batch = preprocess_robot_dataset(batch, 
         FLAGS.clip_action, 
@@ -200,29 +150,22 @@ def main(argv):
             model=FLAGS.encoder,
         )
 
+    params = policy.init(
+        state=batch['state'][:5, ...],
+        images=[batch[f'obs/{key}'][:5, ...] for key in image_keys],
+        shape_vec=batch['shape_vec'][:5, ...] if 'shape_vec' in batch.keys() else None,
+        primitive_vec=batch['primitive_vec'][:5, ...] if 'primitive_vec' in batch.keys() else None,
+        rngs=next_rng(policy.rng_keys())
+    )
 
-    if FLAGS.finetune_policy:
-        _, params = load_policy_and_params(
-            FLAGS.load_checkpoint, FLAGS.policy, 'train_state')
-        learning_rate = optax.constant_schedule(value=FLAGS.lr)
+    learning_rate = optax.warmup_cosine_decay_schedule(
+        init_value=0.0,
+        peak_value=FLAGS.lr,
+        warmup_steps=FLAGS.lr_warmup_steps,
+        decay_steps=FLAGS.total_steps,
+        end_value=0.0,
+    )
     
-    else:
-
-        params = policy.init(
-            state=batch['state'][:5, ...],
-            images=[batch[f'obs/{key}'][:5, ...] for key in image_keys],
-            shape_vec=batch['shape_vec'][:5, ...] if 'shape_vec' in batch.keys() else None,
-            primitive_vec=batch['primitive_vec'][:5, ...] if 'primitive_vec' in batch.keys() else None,
-            rngs=next_rng(policy.rng_keys())
-        )
-
-        learning_rate = optax.warmup_cosine_decay_schedule(
-            init_value=0.0,
-            peak_value=FLAGS.lr,
-            warmup_steps=FLAGS.lr_warmup_steps,
-            decay_steps=FLAGS.total_steps,
-            end_value=0.0,
-        )
     if FLAGS.train_gripper:
         def weight_decay_mask(params):
             def decay(name, _):

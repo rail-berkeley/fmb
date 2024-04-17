@@ -27,121 +27,244 @@ Key = Union[str, int]
 Example = Dict[str, Any]
 KeyExample = Tuple[Key, Example]
 
-N_WORKERS = 20 # number of parallel workers for data conversion
-MAX_PATHS_IN_MEMORY = 400            # number of paths converted & stored in memory before writing to disk
+N_WORKERS = 32 # number of parallel workers for data conversion
+MAX_PATHS_IN_MEMORY = 200            # number of paths converted & stored in memory before writing to disk
                                     # -> the higher the faster / more parallel conversion, adjust based on avilable RAM
                                     # note that one path may yield multiple episodes and adjust accordingly
 
 
-# _embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
+_embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
 
-# OBJECT_IDS = {
-#     1: 'rectangle',
-#     2: 'round',
-#     3: 'oval',
-#     4: 'hexagon',
-#     5: 'arch',
-#     6: 'square-circle',
-#     7: 'double-square',
-#     8: '3 prong',
-#     9: 'star',
-# }
+BOARD1_OBJECT_IDS = {
+    1: 'purple',
+    2: 'blue',
+    3: 'yellow',
+    4: 'green',
+}
 
-# COLOR_IDS = {
-#     1: 'brown',
-#     2: 'red',
-#     3: 'jeans red',
-#     4: 'yellow',
-#     5: 'green',
-#     6: 'jeans blue',
-#     7: 'dark blue',
-#     8: 'purple',
-# }
-
-# SIZE_IDS = {
-#     'L': 'large',
-#     'M': 'medium',
-#     'S': 'small'
-# }
-
-# LENGTH_IDS = {
-#     'L': 'long',
-#     'S': 'short'
-# }
-
-# DISTRACTOR_IDS = {
-#     'n': False,
-#     'y': True
-# }
-
-# INSTRUCT_EMBEDS = {}
-# for object in tqdm.tqdm(OBJECT_IDS.values()):
-#     for color in COLOR_IDS.values():
-#         for size in SIZE_IDS.values():
-#             for length in LENGTH_IDS.values():
-#                 for distractor in DISTRACTOR_IDS.values():
-#                     for orientation in ['horizontal', 'vertical']:
-#                         instruct = f"Pick up the {size} {length} {color} {object} piece {orientation}ly and insert {'with' if distractor else 'without'} distractors."
-#                         instruct_embed = _embed([instruct])[0].numpy()
-#                         INSTRUCT_EMBEDS[instruct] = instruct_embed
+BOARD2_OBJECT_IDS = {
+    1: 'green',
+    2: 'brown',
+    3: 'blue',
+    4: 'red',
+}
 
 
-# def _parse_instruct(episode_path):
-#     filename = os.path.basename(episode_path)
-#     elems = filename.split('_')
-#     object = OBJECT_IDS[int(elems[0])]
-#     size = SIZE_IDS[elems[1]]
-#     length = LENGTH_IDS[elems[2]]
-#     color = COLOR_IDS[int(elems[3])]
-#     orientation = elems[4]
-#     distractor = DISTRACTOR_IDS[elems[5]]
-#     return f"Pick up the {size} {length} {color} {object} piece {orientation}ly and insert {'with' if distractor else 'without'} distractors."
+BOARD3_OBJECT_IDS = {
+    1: 'green',
+    2: 'blue',
+    3: 'purple',
+    4: 'red',
+}
+
+OBJECT_IDS = {
+    1: 'rectangle',
+    2: 'round',
+    3: 'oval',
+    4: 'hexagon',
+    5: 'arch',
+    6: 'square-circle',
+    7: 'double-square',
+    8: '3 prong',
+    9: 'star',
+}
+
+COLOR_IDS = {
+    1: 'brown',
+    2: 'red',
+    3: 'jeans red',
+    4: 'yellow',
+    5: 'green',
+    6: 'jeans blue',
+    7: 'dark blue',
+    8: 'purple',
+}
+
+SIZE_IDS = {
+    'L': 'large',
+    'M': 'medium',
+    'S': 'small'
+}
+
+LENGTH_IDS = {
+    'L': 'long',
+    'S': 'short'
+}
+
+DISTRACTOR_IDS = {
+    'n': False,
+    'y': True
+}
+
+
+INSTRUCT_EMBEDS = {}
+for object in tqdm.tqdm(list(OBJECT_IDS.values()) + list(BOARD1_OBJECT_IDS.values()) + list(BOARD2_OBJECT_IDS.values()) + list(BOARD3_OBJECT_IDS.values())):
+    instruct = f"Pick up the {object} object and insert it."
+    instruct_embed = _embed([instruct])[0].numpy()
+    INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+    instruct = f"Pick up the {object} object."
+    instruct_embed = _embed([instruct])[0].numpy()
+    INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+    instruct = f"Insert the {object} object."
+    instruct_embed = _embed([instruct])[0].numpy()
+    INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+    instruct = f"Regrasp the {object} object."
+    instruct_embed = _embed([instruct])[0].numpy()
+    INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+    instruct = f"Rotate the {object} object."
+    instruct_embed = _embed([instruct])[0].numpy()
+    INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+    instruct = f"Place the {object} object on the fixture."
+    instruct_embed = _embed([instruct])[0].numpy()
+    INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+instruct = f"Move up."
+instruct_embed = _embed([instruct])[0].numpy()
+INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+instruct = f"Move to above the board."
+instruct_embed = _embed([instruct])[0].numpy()
+INSTRUCT_EMBEDS[instruct] = instruct_embed
+
+
+def _parse_instruct(episode_path):
+    filename = os.path.basename(episode_path)
+    elems = filename.split('_')
+    if "single_object_manipulation/insert_only" in episode_path:
+        object = OBJECT_IDS[int(elems[2])]
+        return f"Insert the {object} object."
+    elif "single_object_manipulation" in episode_path:
+        object = OBJECT_IDS[int(elems[0])]
+        return f"Pick up the {object} object and insert it."
+    elif "board_1" in episode_path:
+        object = BOARD1_OBJECT_IDS[int(elems[1])]
+        return f"Pick up the {object} object and insert it."
+    elif "board_2" in episode_path:
+        object = BOARD2_OBJECT_IDS[int(elems[1])]
+        return f"Pick up the {object} object and insert it."
+    elif "board_3" in episode_path:
+        object = BOARD3_OBJECT_IDS[int(elems[1])]
+        return f"Pick up the {object} object and insert it."
+    else:
+        raise ValueError(f"Unknown episode type {episode_path}.")
+    
+def _parse_primitive_instruct(primitive, episode_path):
+    filename = os.path.basename(episode_path)
+    elems = filename.split('_')
+    if "single_object_manipulation/insert_only" in episode_path:
+        object = OBJECT_IDS[int(elems[2])]
+    elif "single_object_manipulation" in episode_path:
+        object = OBJECT_IDS[int(elems[0])]
+    elif "board_1" in episode_path:
+        object = BOARD1_OBJECT_IDS[int(elems[1])]
+    elif "board_2" in episode_path:
+        object = BOARD2_OBJECT_IDS[int(elems[1])]
+    elif "board_3" in episode_path:
+        object = BOARD3_OBJECT_IDS[int(elems[1])]
+    else:
+        raise ValueError(f"Unknown episode type {episode_path}.")
+    
+    if primitive == 'grasp':
+        return f"Pick up the {object} object."
+    elif primitive == 'insert':
+        return f"Insert the {object} object."
+    elif primitive == 'regrasp':
+        return f"Regrasp the {object} object."
+    elif primitive == 'place_on_fixture':
+        return f"Place the {object} object on the fixture."
+    elif primitive == 'rotate':
+        return f"Rotate the {object} object."
+    elif primitive == 'move_up':
+        return f"Move up."
+    elif primitive == 'go_to_board':
+        return f"Move to above the board."
+    else:
+        raise ValueError(f"Unknown primitive {primitive}.")
 
 
 def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
     """Generator of examples for each split."""
 
-    def _parse_example(data):
+    def _parse_example(episode_path, data, instruct, instruct_embed):
         # assemble episode --> here we're assuming demos so we set reward to 1 at the end
+        filename = os.path.basename(episode_path)
+        elems = filename.split('_')
+        if "single_object_manipulation" in episode_path:
+            object_id = -1
+            shape_id = data['object_info']['shape']
+            color_id = data['object_info']['color']
+            length = LENGTH_IDS[data['object_info']['length']]
+            size = SIZE_IDS[data['object_info']['size']]
+        elif "multi_object_manipulation" in episode_path:
+            object_id = int(elems[1])
+            shape_id = -1
+            color_id = -1
+            length = ''
+            size = ''
+        else:
+            raise ValueError(f"Unknown episode type {episode_path}.")
+        
+        
         episode = []
         for i in range(data['actions'].shape[0]):
-            #try:
-            if True:
-                episode.append({
-                    'observation': {
-                        'image_side_1': data['obs/side_1'][i].astype(np.uint8),
-                        'image_side_2': data['obs/side_2'][i].astype(np.uint8),
-                        'image_wrist_1': data['obs/wrist_1'][i].astype(np.uint8),
-                        'image_wrist_2': data['obs/wrist_2'][i].astype(np.uint8),
-                        # 'image_side_1_depth': data['obs/side_1_depth'][i].astype(np.float32),
-                        # 'image_side_2_depth': data['obs/side_2_depth'][i].astype(np.float32),
-                        # 'image_wrist_1_depth': data['obs/wrist_1_depth'][i].astype(np.float32),
-                        # 'image_wrist_2_depth': data['obs/wrist_2_depth'][i].astype(np.float32),
-                        'joint_pos': data['obs/q'][i].astype(np.float32),
-                        'joint_vel': data['obs/dq'][i].astype(np.float32),
-                        'eef_pose': data['obs/tcp_pose'][i].astype(np.float32),
-                        'eef_vel': data['obs/tcp_vel'][i].astype(np.float32),
-                        'eef_force': data['obs/tcp_force'][i].astype(np.float32),
-                        'eef_torque': data['obs/tcp_torque'][i].astype(np.float32),
-                        'state_gripper_pose': data['obs/gripper_pose'][i].astype(np.float32),
-                        'primitive': data['primitive'][i],
-                        'peg_id': np.int_(data['peg_id'][i]).astype(np.uint8),
-                    },
-                    'action': data['actions'][i].astype(np.float32),
-                    'discount': 1.0,
-                    'reward': float(i == (data['actions'].shape[0] - 1)),
-                    'is_first': i == 0,
-                    'is_last': i == (data['actions'].shape[0] - 1),
-                    'is_terminal': i == (data['actions'].shape[0] - 1)
-                })
-            #except:
-            #    return None
+            transition_instruct = _parse_primitive_instruct(data['primitive'][i], episode_path)
+            episode.append({
+                'observation': {
+                    'image_side_1': data['obs/side_1'][i].astype(np.uint8),
+                    'image_side_2': data['obs/side_2'][i].astype(np.uint8),
+                    'image_wrist_1': data['obs/wrist_1'][i].astype(np.uint8),
+                    'image_wrist_2': data['obs/wrist_2'][i].astype(np.uint8),
+                    'image_side_1_depth': data['obs/side_1_depth'][i].astype(np.float32),
+                    'image_side_2_depth': data['obs/side_2_depth'][i].astype(np.float32),
+                    'image_wrist_1_depth': data['obs/wrist_1_depth'][i].astype(np.float32),
+                    'image_wrist_2_depth': data['obs/wrist_2_depth'][i].astype(np.float32),
+                    'joint_pos': data['obs/q'][i].astype(np.float32),
+                    'joint_vel': data['obs/dq'][i].astype(np.float32),
+                    'eef_pose': data['obs/tcp_pose'][i].astype(np.float32),
+                    'eef_vel': data['obs/tcp_vel'][i].astype(np.float32),
+                    'eef_force': data['obs/tcp_force'][i].astype(np.float32),
+                    'eef_torque': data['obs/tcp_torque'][i].astype(np.float32),
+                    'state_gripper_pose': data['obs/gripper_pose'][i].astype(np.float32),
+                    'primitive': data['primitive'][i],
+                    'object_id': np.int_(object_id).astype(np.uint8),
+                    'shape_id': np.int_(shape_id).astype(np.uint8),
+                    'color_id': np.int_(color_id).astype(np.uint8),
+                    'length': length,
+                    'size': size,
+                },
+                'action': data['actions'][i].astype(np.float32),
+                'discount': 1.0,
+                'reward': float(i == (data['actions'].shape[0] - 1)),
+                'is_first': i == 0,
+                'is_last': i == (data['actions'].shape[0] - 1),
+                'is_terminal': i == (data['actions'].shape[0] - 1),
+                'language_instruction': transition_instruct,
+                'language_embedding': INSTRUCT_EMBEDS[transition_instruct],
+            })
 
+        if "single_object_manipulation" in episode_path:
+            episode_task = "single_object_manipulation"
+        elif "multi_object_manipulation/board_1" in episode_path:
+            episode_task = "multi_object_manipulation/board_1"
+        elif "multi_object_manipulation/board_2" in episode_path:
+            episode_task = "multi_object_manipulation/board_2"
+        elif "multi_object_manipulation/board_3" in episode_path:
+            episode_task = "multi_object_manipulation/board_3"
+        else:
+            raise ValueError(f"Unknown episode type {episode_path}.")
         # create output data sample
         sample = {
             'steps': episode,
             'episode_metadata': {
-                'file_path': episode_path
+                'episode_task': episode_task,
+                'file_path': episode_path,
+                'episode_language_instruction': instruct,
+                'episode_language_embedding': instruct_embed,
             }
         }
 
@@ -150,9 +273,9 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
 
     for episode_path in paths:
         data = np.load(episode_path, allow_pickle=True).item()  # this is a list of dicts in our case
-        # instruct = _parse_instruct(episode_path)
-        # instruct_embed = INSTRUCT_EMBEDS[instruct]
-        sample = _parse_example(data)
+        instruct = _parse_instruct(episode_path)
+        instruct_embed = INSTRUCT_EMBEDS[instruct]
+        sample = _parse_example(episode_path, data, instruct, instruct_embed)
         if sample is None:
             yield None
         else:
@@ -162,20 +285,9 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
 class FmbDataset(tfds.core.GeneratorBasedBuilder):
     """DatasetBuilder for example dataset."""
 
-    VERSION = tfds.core.Version('12.0.0')
+    VERSION = tfds.core.Version('1.0.0')
     RELEASE_NOTES = {
       '1.0.0': 'Initial release.',
-      '2.0.0': 'Jpeg compression',
-      '3.0.0': 'Filtered for ICRA',
-      '4.0.0': 'More Data for 3 Pegs',
-      '5.0.0': 'Filter out insert 2, 4',
-      '6.0.0': 'Change star for hexagon',
-      '7.0.0': 'Composition board 100 demos',
-      '8.0.0': 'Composition board 30 more demos and 300 more grasp',
-      '9.0.0': 'Composition board unfilered',
-      '10.0.0': 'Composition board determinstic grasp + reorient + insert',
-      '11.0.0': '57 more demos and seperated grasp peg_id',
-      '12.0.0': '150 trajectories of new board 1'
     }
 
     def _info(self) -> tfds.core.DatasetInfo:
@@ -187,47 +299,47 @@ class FmbDataset(tfds.core.GeneratorBasedBuilder):
                         'image_side_1': tfds.features.Image(
                             shape=(256, 256, 3),
                             dtype=np.uint8,
-                            encoding_format='png',
+                            encoding_format='jpeg',
                             doc='Side camera 1 RGB observation.',
                         ),
                         'image_side_2': tfds.features.Image(
                             shape=(256, 256, 3),
                             dtype=np.uint8,
-                            encoding_format='png',
+                            encoding_format='jpeg',
                             doc='Side camera 2 RGB observation.',
                         ),
                         'image_wrist_1': tfds.features.Image(
                             shape=(256, 256, 3),
                             dtype=np.uint8,
-                            encoding_format='png',
+                            encoding_format='jpeg',
                             doc='Wrist camera 1 RGB observation.',
                         ),
                         'image_wrist_2': tfds.features.Image(
                             shape=(256, 256, 3),
                             dtype=np.uint8,
-                            encoding_format='png',
+                            encoding_format='jpeg',
                             doc='Wrist camera 2 RGB observation.',
                         ),
-                        # 'image_side_1_depth': tfds.features.Tensor(
-                        #     shape=(256, 256,),
-                        #     dtype=np.float32,
-                        #     doc='Side camera 1 depth observation.',
-                        # ),
-                        # 'image_side_2_depth': tfds.features.Tensor(
-                        #     shape=(256, 256,),
-                        #     dtype=np.float32,
-                        #     doc='Side camera 2 depth observation.',
-                        # ),
-                        # 'image_wrist_1_depth': tfds.features.Tensor(
-                        #     shape=(256, 256,),
-                        #     dtype=np.float32,
-                        #     doc='Wrist camera 1 depth observation.',
-                        # ),
-                        # 'image_wrist_2_depth': tfds.features.Tensor(
-                        #     shape=(256, 256,),
-                        #     dtype=np.float32,
-                        #     doc='Wrist camera 2 depth observation.',
-                        # ),
+                        'image_side_1_depth': tfds.features.Tensor(
+                            shape=(256, 256,),
+                            dtype=np.float32,
+                            doc='Side camera 1 depth observation.',
+                        ),
+                        'image_side_2_depth': tfds.features.Tensor(
+                            shape=(256, 256,),
+                            dtype=np.float32,
+                            doc='Side camera 2 depth observation.',
+                        ),
+                        'image_wrist_1_depth': tfds.features.Tensor(
+                            shape=(256, 256,),
+                            dtype=np.float32,
+                            doc='Wrist camera 1 depth observation.',
+                        ),
+                        'image_wrist_2_depth': tfds.features.Tensor(
+                            shape=(256, 256,),
+                            dtype=np.float32,
+                            doc='Wrist camera 2 depth observation.',
+                        ),
                         'joint_pos': tfds.features.Tensor(
                             shape=(7,),
                             dtype=np.float32,
@@ -241,39 +353,58 @@ class FmbDataset(tfds.core.GeneratorBasedBuilder):
                         'eef_pose': tfds.features.Tensor(
                             shape=(7,),
                             dtype=np.float32,
-                            doc='Robot EEF pose.',
+                            doc='Robot EEF pose in base frame.',
                         ),
                         'eef_vel': tfds.features.Tensor(
                             shape=(6,),
                             dtype=np.float32,
-                            doc='Robot EEF velocity.',
+                            doc='Robot EEF velocity in base frame.',
                         ),
                         'eef_force': tfds.features.Tensor(
                             shape=(3,),
                             dtype=np.float32,
-                            doc='Robot EEF force.',
+                            doc='Robot EEF force in eef frame.',
                         ),
                         'eef_torque': tfds.features.Tensor(
                             shape=(3,),
                             dtype=np.float32,
-                            doc='Robot EEF torque.',
+                            doc='Robot EEF torque in eef frame.',
                         ),
                         'state_gripper_pose': tfds.features.Scalar(
                             dtype=np.float32,
-                            doc='Gripper pose of the robot.'
+                            doc='Gripper pose of the robot. 1 for close, 0 for open.'
                         ),
                         'primitive': tfds.features.Text(
                             doc='Primitive Skill Instruction for this time step.'
                         ),
-                        'peg_id': tfds.features.Scalar(
+                        'object_id': tfds.features.Scalar(
                             dtype=np.uint8,
-                            doc='Object ID of the object being manipulated.'
-                        )
+                            doc='Object ID of the object being manipulated. '
+                                'Multi-object dataset only. -1 padding for single-object dataset.'
+                        ),
+                        'shape_id': tfds.features.Scalar(
+                            dtype=np.uint8,
+                            doc='Shape ID of the object being manipulated. '
+                                'Single-object dataset only. -1 padding for multi-object dataset.'
+                        ),
+                        'color_id': tfds.features.Scalar(
+                            dtype=np.uint8,
+                            doc='Color ID of the object being manipulated. '
+                                'Single-object dataset only. -1 padding for multi-object dataset.'
+                        ),
+                        'length': tfds.features.Text(
+                            doc='Length of the object being manipulated. '
+                                'Single-object dataset only. Empty string for multi-object dataset.'
+                        ),
+                        'size': tfds.features.Text(
+                            doc='Size of the object being manipulated. '
+                                'Single-object dataset only. Empty string for multi-object dataset.'
+                        ),
                     }),
                     'action': tfds.features.Tensor(
                         shape=(7,),
                         dtype=np.float32,
-                        doc='Robot end-effector twists.',
+                        doc='Robot end effector pose delta.',
                     ),
                     'discount': tfds.features.Scalar(
                         dtype=np.float32,
@@ -295,18 +426,41 @@ class FmbDataset(tfds.core.GeneratorBasedBuilder):
                         dtype=np.bool_,
                         doc='True on last step of the episode if it is a terminal step, True for demos.'
                     ),
+                    'language_instruction': tfds.features.Text(
+                        doc='Language Instruction.'
+                    ),
+                    'language_embedding': tfds.features.Tensor(
+                        shape=(512,),
+                        dtype=np.float32,
+                        doc='Kona language embedding. '
+                            'See https://tfhub.dev/google/universal-sentence-encoder-large/5'
+                    ),
                 }),
                 'episode_metadata': tfds.features.FeaturesDict({
+                    'episode_task': tfds.features.Text(
+                        doc='Task for the entire episode. (e.g. single object / multi-object-1)'
+                    ),
                     'file_path': tfds.features.Text(
                         doc='Path to the original data file.'
+                    ),
+                    'episode_language_instruction': tfds.features.Text(
+                        doc='Language instruction for the entire episode.'
+                    ),
+                    'episode_language_embedding': tfds.features.Tensor(
+                        shape=(512,),
+                        dtype=np.float32,
+                        doc='Kona language embedding for the entire episode. '
+                            'See https://tfhub.dev/google/universal-sentence-encoder-large/5'
                     ),
                 }),
             }))
 
     def _split_paths(self):
         """Define data splits."""
+        all = glob.glob('/media/nvmep3p/fmb2/np_release/multi_object_manipulation/*/*.npy') + glob.glob('/media/nvmep3p/fmb2/np_release/single_object_manipulation/*.npy')
+        print('Total number of episodes:', len(all))
         return {
-                'train': glob.glob('/media/nvmep3p/fmb2/processed_demos/board_1/np/*.npy'),
+                'train': all,
         }
 
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
