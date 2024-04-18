@@ -8,20 +8,14 @@
 FMB is a benchmark for robot learning consisting of various manipulation tasks, 22,550 expert demonstrations, and a set of imitation learning baselines. This repo contains the code and instructions to reproduce the benchmark, including robot controller, dataset builder, training and evaluation code for the various imitation learning baselines. 
 
 **Table of Contents**
-- [Robot Infra](./robot_infra)
-- [Dataset Builder](./fmb_dataset_builder/)
-- [ResNet-based Policies](./ResNet/)
-- [Transformer-based Policies](./Transformer/)
-- [Diffusion Policies]()
+|Module|Description|
+|---|---|
+| [Robot Infra](./robot_infra) | For controllering the robot. |
+| [Dataset Builder](./fmb_dataset_builder/) | Converting your own RLDS dataset for training. |
+| [ResNet-based Policies](./ResNet/) | Training and evaluating ResNet-based policies. |
+| [Transformer-based Policies](./Transformer/) | Training and evaluating Transformer-based policies. |
+| [Diffusion Policies]() | Training and evaluating Diffusion policies. |
 
-
-
-## Dataset Builder
-The complete FMB dataset is released in `.npy` at the [dataset page](https://functional-manipulation-benchmark.github.io/dataset/index.html). The `.npy` files can be filtered and converted into 
-<!-- This code consists of three components:
-1. [fmb_dataset_builder](./fmb_dataset_builder/): used to convert data into RLDS format
-2. [ResNet](./ResNet/): used to train and eval fResNet+MLP policies
-3. [Transformer](./Transformer/): used to trian and eval Transformer-based policies -->
 
 ## BibTex
 If you found this code useful, consider citing the following paper:
