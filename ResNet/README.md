@@ -3,7 +3,7 @@
 Assume the machines have the lastest Nvdia drivers and CUDA Versions (either 12.1 or 11.x)
 Run
 ```bash
-conda create -n fmb_resnet python=3.10
+conda create -n fmb_resnet python=3.9
 conda activate fmb_resnet
 pip install -r requirements.txt
 # CUDA 12 installation

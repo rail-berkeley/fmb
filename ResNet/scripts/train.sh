@@ -8,8 +8,8 @@ export TF_FORCE_GPU_ALLOW_GROWTH=true
 export PYTHONPATH="$PYTHONPATH:$PROJECT_HOME/src"
 
 python -m src.bc_main \
-        --dataset_path="PATH_TO_DATA" \
-        --dataset_name="DATASET_NAME:VERSION_NUMBER" \
+        --dataset_path="/home/undergrad/fmb_dev/data/" \
+        --dataset_name="fmb_insert_hexagon50_dataset:1.0.0" \
         --seed=24 \
         --dataset_image_keys='side_1:side_2:wrist_1:wrist_2' \
         --state_keys='tcp_pose:tcp_vel:tcp_force:tcp_torque' \
@@ -32,7 +32,6 @@ python -m src.bc_main \
         --logger.project="$EXP_NAME" \
         --train_gripper=True \
         --device='gpu' \
-        --tfrecord=False \
         --num_pegs=4 \
         --num_primitives=4 \
         --primitive="grasp:place_on_fixture:regrasp:insert"
