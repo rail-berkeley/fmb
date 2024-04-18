@@ -18,6 +18,7 @@ setup(
         "requests",
         "flask",
         "defusedxml",
-        "absl-py==1.4.0"
+        "absl-py==1.4.0",
+        "pynput"
     ],
 )

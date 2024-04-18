@@ -40,9 +40,9 @@ realtime_config: ignore
     ```
     | Flags | Description |
     | --- | --- |
-    | robot_ip | IP of the robot for launching the controller |
-    | gripper_dist | Distance the gripper should open to. 0.09 for single-object task, 0.075 for the multi-object task |
-    | force_base_frame | Whether to read the end-effector force/torque information in the base frame. Only set this flag if running provided policies. The public FMB dataset expresses force/torque in the end-effector frame. |
+    | `--robot_ip` | IP of the robot for launching the controller |
+    | `--gripper_dist` | Distance the gripper should open to. 0.09 for single-object task, 0.075 for the multi-object task |
+    | `--force_base_frame` | Whether to read the end-effector force/torque information in the base frame. Only set this flag if running provided policies. The public FMB dataset expresses force/torque in the end-effector frame. |
 
 
     This should start ROS node impedence controller and the HTTP server. You can test that things are running by trying to gently push the end effector around. If the impedence controller is running, it should be compliant.
