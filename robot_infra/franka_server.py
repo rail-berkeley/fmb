@@ -19,27 +19,20 @@ from dynamic_reconfigure.client import Client as ReconfClient
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
-    "robot_ip", "172.16.0.2", "IP address of the franka robot's controller box"
-)
-flags.DEFINE_list(
-    "reset_joint_target",
-    [-0.07, -0.1, 0.0, -2.5, -0.1, 2.5, -0.6],
-    "Target joint angles for the robot to reset to",
+    "robot_ip", "173.16.0.2", "IP address of the franka robot's controller box"
 )
 flags.DEFINE_float("gripper_dist", 0.09, 
                    "Gripper open distance: 0.09 for single-object task, 0.075 for multi-object task")
+
 flags.DEFINE_bool("force_base_frame", False, "Use base frame for force/torque")
+
+JOINT_RESET_TARGET = [-0.07, -0.1, 0.0, -2.5, -0.1, 2.5, -0.6]
 
 class FrankaServer:
     """Handles the starting and stopping of the impedance controller
     (as well as backup) joint recovery policy."""
 
-    def __init__(self, robot_ip, gripper_type, ros_pkg_name, reset_joint_target):
-        self.robot_ip = robot_ip
-        self.ros_pkg_name = ros_pkg_name
-        self.reset_joint_target = reset_joint_target
-        self.gripper_type = gripper_type
-        
+    def __init__(self):
         self.grippermovepub = rospy.Publisher(
             "/franka_gripper/move/goal", MoveActionGoal, queue_size=1
         )
@@ -68,14 +61,15 @@ class FrankaServer:
         )
 
 
+
     def start_impedance(self):
         """Launches the impedance controller"""
         self.imp = subprocess.Popen(
             [
                 "roslaunch",
-                self.ros_pkg_name,
+                "serl_franka_controllers",
                 "impedance.launch",
-                "robot_ip:=" + self.robot_ip,
+                "robot_ip:=" + FLAGS.robot_ip,
                 f"load_gripper:=true",
             ],
             stdout=subprocess.PIPE,
@@ -106,14 +100,14 @@ class FrankaServer:
         # Launch joint controller reset
         # set rosparm with rospkg
         # rosparam set /target_joint_positions '[q1, q2, q3, q4, q5, q6, q7]'
-        rospy.set_param("/target_joint_positions", self.reset_joint_target)
+        rospy.set_param("/target_joint_positions", JOINT_RESET_TARGET)
 
         self.joint_controller = subprocess.Popen(
             [
                 "roslaunch",
-                self.ros_pkg_name,
+                "serl_franka_controllers", 
                 "joint.launch",
-                "robot_ip:=" + self.robot_ip,
+                "robot_ip:=" + FLAGS.robot_ip,
                 f"load_gripper:=true",
             ],
             stdout=subprocess.PIPE,
@@ -126,7 +120,7 @@ class FrankaServer:
         count = 0
         time.sleep(1)
         while not np.allclose(
-            np.array(self.reset_joint_target) - np.array(self.q),
+            np.array(JOINT_RESET_TARGET) - np.array(self.q),
             0,
             atol=1e-2,
             rtol=1e-2,
@@ -178,12 +172,11 @@ class FrankaServer:
         jacobian = np.array(list(msg.zero_jacobian)).reshape((6, 7), order="F")
         self.jacobian = jacobian
         
-    def update_gripper(self, msg):
-        self.gripper_dist = np.sum(msg.position)
+    def _update_gripper(self, msg):
+        self.gripper_pos = np.sum(msg.position)
         
-    ## Route for Closing the Gripper
-    @app.route('/close', methods=['POST'])
-    def closed(self):
+
+    def close(self):
         print("close")
         grasp = GraspActionGoal()
         grasp.goal.width= 0.01
@@ -194,8 +187,6 @@ class FrankaServer:
         self.grippergrasppub.publish(grasp)
         return 'Closed'
 
-    ## Route for Opening the Gripper
-    @app.route('/open', methods=['POST'])
     def open(self):
         print("open")
         msg = MoveActionGoal()
@@ -209,12 +200,6 @@ class FrankaServer:
 
 
 def main(_):
-    ROS_PKG_NAME = "serl_franka_controllers"
-
-    ROBOT_IP = FLAGS.robot_ip
-    GRIPPER_TYPE = FLAGS.gripper_type
-    RESET_JOINT_TARGET = FLAGS.reset_joint_target
-
     webapp = Flask(__name__)
 
     try:
@@ -227,17 +212,13 @@ def main(_):
     rospy.init_node("franka_control_api")
 
     """Starts impedance controller"""
-    robot_server = FrankaServer(
-        robot_ip=ROBOT_IP,
-        gripper_type=GRIPPER_TYPE,
-        ros_pkg_name=ROS_PKG_NAME,
-        reset_joint_target=RESET_JOINT_TARGET,
-    )
+    robot_server = FrankaServer()
     robot_server.start_impedance()
 
     reconf_client = ReconfClient(
         "cartesian_impedance_controllerdynamic_reconfigure_compliance_param_node"
     )
+
 
     # Route for Starting impedance
     @webapp.route("/startimp", methods=["POST"])
@@ -333,12 +314,12 @@ def main(_):
                 "q": np.array(robot_server.q).tolist(),
                 "dq": np.array(robot_server.dq).tolist(),
                 "jacobian": np.array(robot_server.jacobian).tolist(),
-                "gripper_pos": robot_server.gripper_pos,
+                "gripper": robot_server.gripper_pos,
             }
         )
 
     ## Route for increasing controller gain
-    @app.route("/precision_mode", methods=["POST"])
+    @webapp.route("/precision_mode", methods=["POST"])
     def precision_mode():
         reconf_client.update_configuration({"translational_stiffness": 2000})
         reconf_client.update_configuration({"translational_damping": 89})
@@ -353,7 +334,7 @@ def main(_):
         
 
     ## Route for decreasing controller gain
-    @app.route("/compliance_mode", methods=["POST"])
+    @webapp.route("/compliance_mode", methods=["POST"])
     def compliance_mode():
         reconf_client.update_configuration({"translational_stiffness": 2000})
         reconf_client.update_configuration({"translational_damping": 89})
@@ -365,7 +346,8 @@ def main(_):
             reconf_client.update_configuration({"translational_clip_" + direction: 0.007})
             reconf_client.update_configuration({"rotational_clip_" + direction: 0.04})
         return 'Compliance'
-        webapp.run(host="0.0.0.0")
+    
+    webapp.run(host="0.0.0.0")
 
 
 if __name__ == "__main__":

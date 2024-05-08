@@ -298,12 +298,6 @@ def main(argv):
         actions[-1] = 1 if actions[-1] > 0.5 else 0
         return actions, {}
 
-    processor = ft.partial(
-        general_preprocessor,
-        primitive_id=np.array([FMB_PRIMITIVE_TO_ID_DICT[FLAGS.primitive]], dtype=np.uint8),
-        peg_id=np.array([FLAGS.peg], dtype=np.uint8),
-    )
-
     env = gym.make("Franka-FMB-v0", hz=10, start_gripper=0) 
 
 

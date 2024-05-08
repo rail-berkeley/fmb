@@ -1,5 +1,6 @@
 from functools import partial
 import pprint
+import re
 import jax
 import jax.numpy as jnp
 import flax
@@ -22,15 +23,26 @@ from .utils import (
 from .rlds.rlds_dataset import RLDSDataset
 
 FLAGS_DEF = define_flags_with_default(
-    seed=42,
     dataset_path='',
     dataset_name='fmb_dataset',
+    peg="",
+    primitive="",
     dataset_image_keys='side_image',
     state_keys='tcp_pose',
-    resnet_type='ResNet18',
+    tcp_frame=False,
     last_action=True,
+    num_pegs=0,
+    num_primitives=0,
+    num_frame_stack=1,
+    num_action_chunk=1,
+    
+    resnet_type='ResNet18',
     image_augmentation='none',
     clip_action=0.99,
+    train_gripper=True,
+    train_mse=False,
+    
+    seed=42,
     train_ratio=0.9,
     batch_size=128,
     total_steps=10000,
@@ -43,22 +55,9 @@ FLAGS_DEF = define_flags_with_default(
     eval_batches=20,
     eval_freq=200,
     save_model=True,
-    encoder='ResNet',
     policy=TanhGaussianResNetPolicy.get_default_config(),
     logger=WandBLogger.get_default_config(),
-    train_gripper=True,
-    load_checkpoint='',
-    tcp_frame=False,
-    data_percent=1.0,
     device='gpu',
-    use_dataloader=True,
-    num_frame_stack=1,
-    num_action_chunk=1,
-    train_mse=False,
-    num_pegs=0,
-    num_primitives=0,
-    primitive="",
-    peg="",
     cache=False,
 )
 FLAGS = absl.flags.FLAGS
@@ -136,8 +135,7 @@ def main(argv):
         FLAGS.tcp_frame
     )
 
-    if FLAGS.encoder == 'ResNet':
-        FLAGS.policy['resnet_type'] = tuple([(FLAGS.resnet_type+'Depth' if 'depth' in key else FLAGS.resnet_type)   for key in image_keys])
+    FLAGS.policy['resnet_type'] = tuple([(FLAGS.resnet_type+'Depth' if 'depth' in key else FLAGS.resnet_type)   for key in image_keys])
     if FLAGS.train_gripper:
         policy = TanhGaussianResNetMixedPolicy(
             output_dim=batch['actions'].shape[-1],
@@ -147,7 +145,6 @@ def main(argv):
         policy = TanhGaussianResNetPolicy(
             output_dim=batch['actions'].shape[-1],
             config_updates=FLAGS.policy,
-            model=FLAGS.encoder,
         )
 
     params = policy.init(
@@ -323,11 +320,8 @@ def main(argv):
     best_loss_model, best_log_probs_model, best_mse_model, best_train_loss_model  = None, None, None, None
 
     for step in range(FLAGS.total_steps+1):
-        if FLAGS.use_dataloader:
-            batch = next(train_loader_iterator)
-            batch = preprocess_robot_dataset(batch, FLAGS.clip_action, image_keys, state_keys, FLAGS.last_action, FLAGS.train_gripper, FLAGS.tcp_frame)
-        else:
-            batch = subsample_batch(train_dataset, FLAGS.batch_size)
+        batch = next(train_loader_iterator)
+        batch = preprocess_robot_dataset(batch, FLAGS.clip_action, image_keys, state_keys, FLAGS.last_action, FLAGS.train_gripper, FLAGS.tcp_frame)
         batch = augment_batch(augmentation, batch, image_keys)
         batch = split_batch_pmap(batch, num_devices)
         rng = next_rng()
@@ -352,11 +346,8 @@ def main(argv):
         if step % FLAGS.eval_freq == 0:
             eval_metrics = []
             for _ in range(FLAGS.eval_batches):
-                if FLAGS.use_dataloader:
-                    batch = next(val_dataset.get_iterator())
-                    batch = preprocess_robot_dataset(batch, FLAGS.clip_action, image_keys, state_keys, FLAGS.last_action, FLAGS.train_gripper, FLAGS.tcp_frame)   
-                else:
-                    batch = subsample_batch(val_dataset, FLAGS.batch_size)
+                batch = next(val_dataset.get_iterator())
+                batch = preprocess_robot_dataset(batch, FLAGS.clip_action, image_keys, state_keys, FLAGS.last_action, FLAGS.train_gripper, FLAGS.tcp_frame)   
                 batch = split_batch_pmap(batch, num_devices)
                 rng = next_rng()
                 rng = jax.random.split(rng, num=num_devices)
