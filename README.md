@@ -1,8 +1,6 @@
 # FMB: A Functional Manipulation Benchmark for Generalizable Robotic Learning
 
-<video width="100%" autoplay loop muted>
-  <source src="./docs/intro_vid_twitter.mp4" type="video/mp4">
-</video>
+<img src="docs/intro.gif" alt="Description of GIF" style="width: 100%;">
 
 **Webpage: [https://functional-manipulation-benchmark.github.io/index.html](https://functional-manipulation-benchmark.github.io/index.html)**
 
