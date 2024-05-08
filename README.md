@@ -1,6 +1,8 @@
 # FMB: A Functional Manipulation Benchmark for Generalizable Robotic Learning
 
-![](./docs/intro.gif)
+<video width="100%" autoplay loop muted>
+  <source src="./docs/intro_vid_twitter.mp4" type="video/mp4">
+</video>
 
 **Webpage: [https://functional-manipulation-benchmark.github.io/index.html](https://functional-manipulation-benchmark.github.io/index.html)**
 
@@ -20,77 +22,85 @@ FMB is a benchmark for robot learning consisting of various manipulation tasks, 
 
 We demonstrate how to use the FMB codebase to process data, train, and evaluate policies on the real robot. Let's imagine that we want to train a ResNet-based, object-ID conditioned insertion policy.
 
-### Installation
-Installl each module according to the instructions included. For this example, we will need:
+### 1. Setup
+1. Installl each module according to the instructions included. For this example, we will need:
 - [Robot Infra](./robot_infra)
 - [Dataset Builder](./fmb_dataset_builder/)
 - [ResNet-based Policies](./ResNet/)
+2. Setup the workspace accordng to the instructions on the [Setup](https://functional-manipulation-benchmark.github.io/files/index.html) page. 
 
-## 1. Processing Data
+### 2. Processing Data
+For faster dataloading, we will first make a new RLDS dataset that only contains the insertion demonstrations for various shapes.
 
-![](./images/peg.png)
+1. Download the raw (`.npy`) [Single-Object Multi-Stage](https://rail.eecs.berkeley.edu/datasets/fmb/single_object_manipulation.zip) dataset from the [Dataset](https://functional-manipulation-benchmark.github.io/dataset/index.html) page of the FMB website.
+2. Create a copy of the `fmb_single_object_dataset` folder inside [Dataset Builder](./fmb_dataset_builder/). Note that this step has been done for you as an example.
 
-> Example is located in [examples/async_peg_insert_drq/](../examples/async_peg_insert_drq/)
-
-> Env and default config are located in `serl_robot_infra/franka_env/envs/peg_env/`
-
-> The `franka_env.envs.wrappers.SpacemouseIntervention` gym wrapper provides the ability to intervene the robot with a spacemouse. This is useful for demo collection, testing robot, and making sure the training Gym environment works as intended.
-
-The peg insertion task is best for getting started with running SERL on a real robot. As the policy should converge and achieve 100% success rate within 30 minutes on a single GPU in the simplest case, this task is great for trouble-shooting the setup quickly. The procedure below assumes you have a Franka arm with a Robotiq Hand-E gripper and 2 RealSense D405 cameras.
-
-### Procedure
-1. 3D-print (1) **Assembly Object** of choice and (1) corresponding **Assembly Board** from the **Single-Object Manipulation Objects** section of [FMB](https://functional-manipulation-benchmark.github.io/files/index.html). Fix the board to the workspace and grasp the peg with the gripper.
-2. 3D-print (2) wrist camera mounts for the RealSense D405 and install onto the threads on the Robotiq Gripper. Create your own config from [peg_env/config.py](../serl_robot_infra/franka_env/envs/peg_env/config.py), and update the camera serial numbers in `REALSENSE_CAMERAS`.
-3. Adjust for the weight of the wrist camera by editing `Desk > Settings > End-effector > Mechnical Data > Mass`.
-4. Unlock the robot and activate FCI in Desk. Then, start the franka_server by running:
     ```bash
-    python serl_robo_infra/robot_servers/franka_server.py --gripper_type=<Robotiq|Franka|None> --robot_ip=<robot_IP> --gripper_ip=<[Optional] Robotiq_gripper_IP>
+    cd fmb_dataset_buildr
+    cp fmb_single_object_dataset fmb_single_object_insert_dataset
     ```
-    This should start the impedance controller and a Flask server ready to recieve requests.
-5. The reward in this task is given by checking whether the end-effector pose matches a fixed target pose. Grasp the desired peg with  `curl -X POST http://127.0.0.1:5000/close_gripper` and manually move the arm into a pose where the peg is inserted into the board. Print the current pose with `curl -X POST http://127.0.0.1:5000/getpos_euler` and update the `TARGET_POSE` in [peg_env/config.py](../serl_robot_infra/franka_env/envs/peg_env/config.py) with the measured end-effector pose.
+3. Rename the necessary fields of the new dataset below. Note that most of these steps has been done for you as an example.
+    - Rename `fmb_insert_dataset/fmb_single_object_dataset_dataset_builder.py` to `fmb_single_object_insert_dataset/fmb_single_object_insert_dataset_dataset_builder.py`
+    - Rename the class named `FmbSingleObjectDataset` inside the python file into `FmbSingleObjectInsertDataset`
+    - Update the version number and release notes inside the class if necessary.
+    - Edit the if clause on [fmb_single_object_insert_dataset_datset_builder.py line 173](./fmb_dataset_builder/fmb_single_object_insert_dataset/fmb_single_object_insert_dataset_dataset_builder.py#173) to only add the transition to the dataset if the primitive is "insert". 
+    - Change the raw dataset path on [line 394](./fmb_dataset_builder/fmb_single_object_insert_dataset/fmb_single_object_insert_dataset_dataset_builder.py#394) to the path of your raw `.npy` dataset.
 
-    **Note: make sure the wrist joint is centered (away from joint limits) and z-axis euler angle is positive at the target pose to avoid discontinuities.
-
-6. Set `RANDOM_RESET` to `False` inside the config file to speedup training. Note the policy would only generalize to any board pose when this is set to `True`, but only try this after the basic task works.
-7. Record 20 demo trajectories with the spacemouse.
+4. Process the dataset
     ```bash
-    cd examples/async_peg_insert_drq
-    python record_demo.py
+    conda activate rlds_env
+    ulimit -n 20000
+    cd fmb_single_object_insert_dataset
+    tfds build --data_dir=<output_path>
     ```
-    The trajectories are saved in `examples/async_peg_insert_drq/peg_insertion_20_trajs_{UUID}.pkl`.
-8. Edit `demo_path` and `checkpoint_path` in `run_learner.sh` and `run_actor.sh`. Train the RL agent with the collected demos by running both learner and actor nodes.
+
+
+### 3. Training the ResNet-based policy
+1. Config the training script for the object-ID conditioned insertion policy in `ResNet/scripts/train.sh` appropiately. The following are commonly used FLAGS configured for this example. The comprehensive list of flags and their explanations can be found in the [ResNet](./ResNet/README.md) page. 
+    
+    - `--dataset_path="<output_path>"`: Path to the directory containing the RLDS dataset. Should be the same path as the <output_path> used above when processing the data.
+    - `--dataset_name="fmb_single_object_insert_dataset:1.0.0"`: Name of the dataset to train on and the version number.
+    - `--dataset_image_keys='side_1:wrist_1:wrist_2'`: This is the best set of image observations to use for the insertion task that we found.
+    - `--state_keys='tcp_pose:tcp_vel:tcp_force:tcp_torque'`: This is the best set of state observations for the insertion task that we found.
+    - `--policy.state_injection='no_xy'`: Exclude the xy translation of the tcp_pose from the observations for better generalization. 
+    - `--train_gripper=False`: No need to train the gripper action dimension for the insertion task as the object shoudl always be grasped.
+    - `--num_pegs=9`: Train the policy with an one-hot vector of length 9 indicating which hole the policy shoud insert the object into.  
+    - `--num_primitives=0`: 0 indicates that no conditioning vector should be used to indicate the primitive since we are only training on insert.
+  
+2. Train the policy
+
     ```bash
-    bash run_learner.sh
-    bash run_actor.sh
+    conda activate fmb_resnet
+    cd ResNet/scripts
+    bash train.sh
     ```
-9. If nothing went wrong, the policy should converge with 100% success rate within 30 minutes without `RANDOM_RESET` and 60 minutes with `RANDOM_RESET`.
-10. The checkpoints are automatically saved and can be evaluated by setting the `--eval_checkpoint_step=CHECKPOINT_NUMBER_TO_EVAL` and `--eval_n_trajs=N_TIMES_TO_EVAL` flags in `run_actor.sh`. Then run:
-    ```bash
-    bash run_actor.sh
-    ```
-    If the policy is trained with `RANDOM_RESET`, it should be able to insert the peg even when you move the board at test time.
 
-
-Let's take the peg insertion task as an example. We wrapped the env as such. The composability of the gym wrappers allows us to easily add or remove functionalities to the gym env. ([code](../examples/async_peg_insert_drq/async_drq_randomized.py))
-
-```python
-env = gym.make('FrankaPegInsert-Vision-v0')  # create the gym env
-env = GripperCloseEnv(env)         # always keep the gripper close for peg insertion
-env = SpacemouseIntervention(env)  # utilize spacemouse to intervene the robot
-env = RelativeFrame(env)           # transform the TCP abs frame of ref to relative frame
-env = Quat2EulerWrapper(env)       # convert rotation from quaternion to euler
-env = SERLObsWrapper(env)          # convert observation to SERL format
-env = ChunkingWrapper(env)         # chunking the observation
-env = RecordEpisodeStatistics(env) # record episode statistics
+### 4. Running the robot infra
+```bash
+conda activat fmb_robot_infra
+cd robot_infra
+python franka_server.py --robot_ip=<robot_IP> --gripper_dist=0.09
 ```
 
+ > If you are running a provided checkpoint, please run `robot_server.py` with the `--force_base_frame` flag. This is because our policies where trained with the force/torque information expressed in the robot's base frame, while the dataset and all future checkpoints should contain the force/torque in the end-effector frame instead.
 
-<!-- ## Dataset Builder
-The complete FMB dataset is released in `.npy` at the [dataset page](https://functional-manipulation-benchmark.github.io/dataset/index.html). The `.npy` files can be filtered and converted into  -->
-<!-- This code consists of three components:
-1. [fmb_dataset_builder](./fmb_dataset_builder/): used to convert data into RLDS format
-2. [ResNet](./ResNet/): used to train and eval fResNet+MLP policies
-3. [Transformer](./Transformer/): used to trian and eval Transformer-based policies -->
+ >If you are evaluating policies for the multi-object tasks, set `--gripper_dist=0.07`. This opens the gripper to a narrower setting to match the dataset and so the objects can be grasped easier.
+
+### 5. Evaluating the policy
+The detailed evaluation protocol for each experiment can be found on the [Evaluation Procedure](https://functional-manipulation-benchmark.github.io/procedure/index.html) page.
+1. Config the `rollout_bc.sh` script as below:
+    
+    - `--load_checkpoint='PATH_TO_CHECKPOINT.pkl'`: Set this to the path of the checkpoint that the training produced.
+    - `--model_key='train_state'`: Indicate the use of the latest checkpoint.
+    - `--primitive='insert'`: Indicate that we are rolling out an insertion policy. Tells the environment to reset to above the board. 
+2. Run the rollout script and record the success rate.
+    ```bash
+    conda activate fmb_resnet
+    cd ResNet/scripts
+    bash rollout_bc.sh
+    ```
+
+
 
 ## BibTex
 If you found this code useful, consider citing the following paper:

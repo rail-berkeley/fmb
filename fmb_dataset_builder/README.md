@@ -24,7 +24,7 @@ If you want to only train on a subset of the full data (ie. only one skill or on
 ```
 ulimit -n 20000
 cd <dataset_name>
-tfds build --overwrite --data_dir=<output_path>
+tfds build --data_dir=<output_path>
 ```
 The command line output should finish with a summary of the generated dataset (including size and number of samples). 
 Please verify that this output looks as expected and that you can find the generated `tfrecord` files in `~/output_path/<name_of_your_dataset>`.
