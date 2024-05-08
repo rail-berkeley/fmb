@@ -170,8 +170,6 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         # assemble episode --> here we're assuming demos so we set reward to 1 at the end
         episode = []
         for i in range(data['actions'].shape[0]):
-            #try:
-            # if data['primitive'][i] == 'grasp':
             if True:
                 episode.append({
                     'observation': {
@@ -205,8 +203,6 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
                     'language_instruction': _parse_primitive_instruct(data['primitive'][i], data['object_info']),
                     'language_embedding': INSTRUCT_EMBEDS[_parse_primitive_instruct(data['primitive'][i], data['object_info'])],
                 })
-            #except:
-            #    return None
 
         # create output data sample
         sample = {
@@ -396,18 +392,6 @@ class FmbSingleObjectDataset(tfds.core.GeneratorBasedBuilder):
     def _split_paths(self):
         """Define data splits."""
         all = glob.glob('/media/nvmep3p/fmb2/np_release/single_object_manipulation/*.npy')
-        # insert = glob.glob('/media/nvmep3p/fmb2/processed_demos/peg/single_object_manipulation/insert*_n_*.npy')
-        # insert_no_distractor = (glob.glob('/media/nvmep3p/fmb2/processed_demos/peg/single_object_manipulation/*4_L*_n_*.npy') + 
-        #                         glob.glob('/media/nvmep3p/fmb2/processed_demos/peg/single_object_manipulation/*4_M*_n_*.npy') + 
-        #                         glob.glob('/media/nvmep3p/fmb2/processed_demos/peg/single_object_manipulation/*4_S*_n_*.npy') )
-        # grasping = [x for x in all if x not in insert]
-        # grasping25 = np.random.choice(grasping, 25, replace=False)
-        # grasping50 = np.random.choice(grasping, 50, replace=False)
-        # grasping100 = np.random.choice(grasping, 100, replace=False)
-        # grasping200 = np.random.choice(grasping, 200, replace=False)
-        # insertion25 = np.random.choice(insert_no_distractor, 25, replace=False)
-        # insertion50 = np.random.choice(insert_no_distractor, 50, replace=False)
-        # insertion100 = np.random.choice(insert_no_distractor, 100, replace=False)
         return {
                 'train': all,
         }

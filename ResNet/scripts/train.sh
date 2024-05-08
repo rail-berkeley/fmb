@@ -7,12 +7,12 @@ export TF_FORCE_GPU_ALLOW_GROWTH=true
 export PYTHONPATH="$PYTHONPATH:$PROJECT_HOME/src"
  
 python -m src.bc_main \
-        --dataset_path="/home/undergrad/fmb_dev/data/" \
-        --dataset_name="fmb_peg1_dataset:2.0.0" \
+        --dataset_path="DATASET_PATH" \
+        --dataset_name="fmb_single_object_insert_dataset:1.0.0" \
         --seed=24 \
-        --dataset_image_keys='side_1:side_2:wrist_1:wrist_2' \
+        --dataset_image_keys='side_1:wrist_1:wrist_2' \
         --state_keys='tcp_pose:tcp_vel:tcp_force:tcp_torque' \
-        --policy.state_injection='full' \
+        --policy.state_injection='no_xy' \
         --last_action=False \
         --image_augmentation='none' \
         --total_steps=100000 \
@@ -26,11 +26,10 @@ python -m src.bc_main \
         --resnet_type='ResNet34' \
         --policy.share_resnet_between_views=False \
         --logger.output_dir="$OUTPUT_DIR/$EXP_NAME" \
-        --logger.mode=disabled \
-        --logger.prefix='PegInsertion' \
+        --logger.mode=enabled \
+        --logger.prefix='FMB' \
         --logger.project="$EXP_NAME" \
-        --train_gripper=True \
+        --train_gripper=False \
         --device='gpu' \
-        --num_pegs=1 \
-        --num_primitives=4 \
-        --primitive="grasp:place_on_fixture:regrasp:insert"
+        --num_pegs=9 \
+        --num_primitives=0
