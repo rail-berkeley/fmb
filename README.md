@@ -1,7 +1,7 @@
 # FMB: A Functional Manipulation Benchmark for Generalizable Robotic Learning
 
+  <video src="https://github.com/rail-berkeley/fmb/assets/92070992/45629b65-e101-4c4c-97f6-a53246bb59ff" type="video/mp4" autoplay loop />
 
-https://github.com/rail-berkeley/fmb/assets/92070992/45629b65-e101-4c4c-97f6-a53246bb59ff
 
 
 
