@@ -104,9 +104,9 @@ def get_config(config_string):
     )
 
     peg_config = dict(
-        mask_peg_id=True,
-        num_peg=11,
-        num_primitive=6,
+        mask_peg_id=False,
+        num_peg=9,
+        num_primitive=1,
     )
 
     grasp_config = dict(
@@ -114,7 +114,10 @@ def get_config(config_string):
     )
     insert_config = dict(
         primitive_key=["insert"],
-        peg_keys=[1,4,6,8,9], # per primitive condition, only insert condition on peg
+        peg_keys=[1,4,6,8,9],
+    )
+    insert_all_data_config = dict(
+        primitive_key=["insert"],
     )
     regrasp_config = dict(
         primitive_key=["regrasp"],
@@ -277,6 +280,26 @@ def get_config(config_string):
                 optimizer=base_optimizer_config,
                 dataset_kwargs={**base_data_config, **insert_config},
                 **base_peg_config,
+            )
+        ),
+
+        "transformer_bc_cond_insert": ConfigDict(
+            dict(
+                agent="transformer_bc",
+                obs_horizon=1,
+                model=update_config(
+                    base_model_config,
+                    observation_tokenizer_kwargs={
+                        "fmb-unified-obs-tokenizer": {**unified_obs_encoder_kwargs},
+                    },
+                    task_tokenizer_kwargs={
+                        "fmb-unified-task-tokenizer": {**base_task_one_hot_encoder_kwargs, **peg_config},
+                    },
+                ),
+                optimizer=base_optimizer_config,
+                dataset_kwargs={**base_data_config, **insert_all_data_config},
+                **base_peg_config,
+                dataset_name="fmb_single_object_insert_dataset",
             )
         ),
 

@@ -1,7 +1,6 @@
-from gymnasium.envs.registration import register
-import numpy as np
+from gym.envs.registration import register
 
 register(
     id='Franka-FMB-v0',
-    entry_point='franka_env.envs:FrankaFMB',
+    entry_point='envs.franka_fmb_env:FrankaFMB',
 )

@@ -19,5 +19,5 @@ See the [Jax Github page](https://github.com/google/jax) for more details on ins
 
 ## Training
 ```bash
-. ./experiments/scripts/train_rlds_fmb.sh
+bash ./experiments/scripts/train_rlds_fmb.sh
 ```

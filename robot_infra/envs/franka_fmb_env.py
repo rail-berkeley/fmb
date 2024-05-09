@@ -11,8 +11,8 @@ import time
 import requests
 import queue
 
-from franka_env.envs.capture.rs_capture import RSCapture
-from franka_env.envs.capture.video_capture import VideoCapture
+from camera.rs_capture import RSCapture
+from camera.video_capture import VideoCapture
 
 class ImageDisplayer(threading.Thread):
     def __init__(self, queue):
@@ -120,7 +120,7 @@ class FrankaFMB(gym.Env):
                     'wrist_2': self.cap_wrist_2,}
         print("Initialized Franka")
         if start_gripper==0:
-            requests.post(self.url + 'open')
+            requests.post(self.url + 'open_gripper')
 
         self.img_queue = queue.Queue()
         self.displayer = ImageDisplayer(self.img_queue)
@@ -148,16 +148,13 @@ class FrankaFMB(gym.Env):
         self.gripper_dist = np.array(ps['gripper'])
 
 
-
-
     def set_gripper(self, position):
-        # print("CALLED GRIPPER", position)
         if position != self.currgrip:
             if position == 1:
-                st = 'close'
+                st = 'close_gripper'
                 self.currgrip = 1
             else:
-                st = 'open'
+                st = 'open_gripper'
                 self.currgrip = 0
         else:
             return
@@ -167,7 +164,7 @@ class FrankaFMB(gym.Env):
         time.sleep(max(0, 1 - delta))
 
         requests.post(self.url + st)
-        if st == 'close':
+        if st == 'close_gripper':
             time.sleep(1.2)
         else:
             time.sleep(0.6)

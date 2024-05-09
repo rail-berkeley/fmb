@@ -164,3 +164,6 @@ wandb
 *.png
 *.sif
 .vscode
+
+*checkpoints/*
+*.zip

@@ -18,26 +18,19 @@ from .jax_utils import JaxRNG, next_rng, wrap_function_with_rng
 from .model import TanhGaussianResNetMixedPolicy, TanhGaussianResNetPolicy
 from .utils import define_flags_with_default, set_random_seed
 from flax.training.train_state import TrainState
-import franka_env
+import robot_infra
 import gym
 
 should_reset = False
-NUM_PEGS = 9
+NUM_PEGS = 0
 FLAGS_DEF = define_flags_with_default(
     load_checkpoint='',
     model_key='train_state',
-    horizon=100,
-    speedup=10,
-    policy_type='evaluation',
-    env_type='evaluation',
-    gpu=True,
-    pause=False,
-    deterministic=False,
-    hide=False,
-    enable_render=False,
-    log_diagnostics=False,
-    seed=1234,
     primitive='',
+    horizon=100,
+    gpu=True,
+    deterministic=False,
+    seed=1234,
 )
 FLAGS = absl.flags.FLAGS
 def on_press(key):
