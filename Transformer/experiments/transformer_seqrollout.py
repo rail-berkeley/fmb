@@ -31,10 +31,6 @@ from orca.train_utils import create_train_state
 import optax
 import functools as ft
 
-
-ACT_MEAN = [0.08881065249443054, -0.029072951525449753, -0.14968131482601166, 0.040181715041399, -0.006027124356478453, 0.0047734929248690605, 0.6311022639274597]
-ACT_STD = [0.2633409798145294, 0.17057746648788452, 0.2521684467792511, 0.3042782247066498, 0.1229381114244461, 0.12113021314144135, 0.4826180338859558]
-
 should_reset = False
 TRAJ_LENGTH ={
     'grasp': 75,
@@ -51,7 +47,10 @@ flags.DEFINE_integer("peg", None, "Name of peg", required=True)
 flags.DEFINE_string("wandb_run_name", None, "Name of wandb run", required=True)
 flags.DEFINE_integer("obs_horizon", 1, "Observation history length")
 flags.DEFINE_integer("im_size", 256, "Image size")
-
+flags.DEFINE_list("act_mean", None, "Mean values for action normalization")
+flags.DEFINE_list("act_std", None, "Standard deviation values for action normalization")
+ACT_MEAN = [float(val) for val in FLAGS.act_mean]
+ACT_STD = [float(val) for val in FLAGS.act_std]
 
 def unnormalize_action(action, mean, std):
     return action * std + mean

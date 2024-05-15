@@ -32,9 +32,6 @@ import optax
 import functools as ft
 
 
-ACT_MEAN = [0.06317705661058426, -0.05525444820523262, -0.10927953571081161, 0.004573756828904152, 0.001322100288234651, -0.05931633710861206, 0.7553160190582275]
-ACT_STD = [0.29594677686691284, 0.26513367891311646, 0.48850929737091064, 0.32914984226226807, 0.1067982092499733, 0.3845826983451843, 0.43103858828544617]
-
 should_reset = False
 
 FLAGS = absl.flags.FLAGS
@@ -44,7 +41,10 @@ flags.DEFINE_integer("peg", None, "Name of peg", required=True)
 flags.DEFINE_string("wandb_run_name", None, "Name of wandb run", required=True)
 flags.DEFINE_integer("obs_horizon", 1, "Observation history length")
 flags.DEFINE_integer("im_size", 256, "Image size")
-
+flags.DEFINE_list("act_mean", None, "Mean values for action normalization")
+flags.DEFINE_list("act_std", None, "Standard deviation values for action normalization")
+ACT_MEAN = [float(val) for val in FLAGS.act_mean]
+ACT_STD = [float(val) for val in FLAGS.act_std]
 
 def unnormalize_action(action, mean, std):
     return action * std + mean
