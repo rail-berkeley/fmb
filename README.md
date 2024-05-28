@@ -14,7 +14,7 @@ FMB is a benchmark for robot learning consisting of various manipulation tasks, 
 | [Dataset Builder](./fmb_dataset_builder/) | Converting your own RLDS dataset for training. |
 | [ResNet-based Policies](./ResNet/) | Training and evaluating ResNet-based policies. |
 | [Transformer-based Policies](./Transformer/) | Training and evaluating Transformer-based policies. |
-| [Diffusion Policies]() | Training and evaluating Diffusion policies. |
+
 
 ## Example Usage
 
